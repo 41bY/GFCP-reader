@@ -176,14 +176,6 @@ with open(fname_GFOUT, 'r') as f:
                         M_slabs[1] += types[labels[i_ord_QM[i]]][0]
                 
                 
-        # elif ('ATOMIC_VELOCITIES' in line):
-        #     vel = []
-        #     for i in range(nat):
-        #         line = next(f)
-        #         token = line.split()
-        #         cords = [float(tk)*phy.HAunit_to_MperS for tk in token[1:]]
-        #         vel.append([token[0]] + cords)
-                
         elif ('GF_ATOM_POSITIONS' in line):
             nat_gf = 0
             for i in range(nat):
