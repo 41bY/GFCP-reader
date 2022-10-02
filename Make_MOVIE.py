@@ -76,6 +76,15 @@ with open(file_pos, 'r') as f:
                                      %(at[0], pos_out[i,0], pos_out[i,1], pos_out[i,2]))
                 
 f_out.close()               
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
+
+

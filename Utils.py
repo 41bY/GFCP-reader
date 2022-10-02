@@ -108,6 +108,25 @@ def create_dir(dir_path : str):
 
 ###############################################################################
 
+def skip_lines(file : io.TextIOBase, lines_to_skip : int):
+    
+    #Check method functioning conditions
+    if not isinstance(file, io.TextIOBase):
+        raise ValueError('The object passed is not a text file object!')
+        
+    if not isinstance(lines_to_skip, int):
+        raise ValueError('Number of lines to be skipped must be an integer!')        
+    
+    if not lines_to_skip > 0:
+        raise ValueError('Number of lines to be skipped must be positive!')
+        
+    for i in range(lines_to_skip):
+        line = file.readline()
+    
+    return line
+
+###############################################################################
+
 def read_tag(file : io.TextIOBase, search_list : list):
     
     #Check method functioning conditions
@@ -123,10 +142,12 @@ def read_tag(file : io.TextIOBase, search_list : list):
         
     
     found_dict = dict.fromkeys(search_list)
-    for line in file:
-        if ('/' in line) | ('EOF' in line):
-            raise ValueError('Following elements in search list have not been\
-                             found:' %search_list)
+    
+    line = 'Start'
+    while line != '':
+
+        line = file.readline()
+        if line == '': return found_dict, line
         
         for search in search_list:
             remove = None
@@ -138,11 +159,12 @@ def read_tag(file : io.TextIOBase, search_list : list):
                 remove = search
                 break
         
-        
         if remove != None: #Remove found elements from the search list
             search_list.remove(remove)        
             if len(search_list) == 0: #If search list is void return map with founds
-                return found_dict
+                return found_dict, line
+            
+    return found_dict, line
 
 ###############################################################################
 
@@ -155,7 +177,7 @@ def read_list(file : io.TextIOBase, num_line : int = 0, check_consistency = True
     if not isinstance(num_line, int):
         raise ValueError('\'num_line\' parameter must be integer!')
     
-    if num_line == 0 & check_consistency == False:
+    if (num_line == 0) & (not check_consistency):
         raise ValueError('\'num_line\' parameter must be greater than zero if \
                          consistency reading is disabled!')
     
@@ -167,7 +189,9 @@ def read_list(file : io.TextIOBase, num_line : int = 0, check_consistency = True
         begin = True
         for n in range(num_line):
             
-            line = next(file)
+            line = file.readline()
+            if line == '': return out_list, line
+            
             token = line.split()
             
             if check_consistency:
@@ -183,13 +207,17 @@ def read_list(file : io.TextIOBase, num_line : int = 0, check_consistency = True
             
             out_list.append(token)
         
-        return out_list
+        return out_list, line
             
             
     elif num_line == 0: #Read lines consistently
         
         begin = True
-        for line in file:
+        line = 'Start'
+        while line != '':
+            
+            line = file.readline()
+            if line == '': return out_list, line
             
             token = line.split()
 
@@ -203,7 +231,7 @@ def read_list(file : io.TextIOBase, num_line : int = 0, check_consistency = True
                                           
             out_list.append(token)
         
-        return out_list
+        return out_list, line
 
 ###############################################################################
 
@@ -211,10 +239,14 @@ def read_CP_input(file_path : str):
     
     with open(file_path, 'r') as f:
         for line in f:     
+            if line == '': break
+            
             
             if '&CONTROL' in line:
                 tags = ['iprint', 'dt']
-                tags_map = read_tag(f, tags)
+                tags_map, line = read_tag(f, tags)
+                if line == '': 
+                    raise ValueError('Simulation input file is missing: ' %tags)
                 
                 iprint = tags_map['iprint']
                 iprint = trim_string(iprint, mode='num')
@@ -227,7 +259,9 @@ def read_CP_input(file_path : str):
             
             elif '&SYSTEM' in line:
                 tags = ['celldm', 'nat', 'ntyp']
-                tags_map = read_tag(f, tags)
+                tags_map, line = read_tag(f, tags)
+                if line == '': 
+                    raise ValueError('Simulation input file is missing: ' %tags)
                 
                 celldm = tags_map['celldm']
                 celldm = trim_string(celldm, mode='num')
@@ -268,12 +302,12 @@ def read_CP_input(file_path : str):
                     cell_unit = celldm*phy.bohr_to_A
                 
                 #Read the cell parameters              
-                cell = read_list(f, num_line = 3, check_consistency = True)
+                cell, line = read_list(f, num_line = 3, check_consistency = True)
                 cell = cell_unit*np.array(cell, dtype=float)
                 
                 
             elif ('ATOMIC_SPECIES' in line):
-                atom_species = read_list(f, num_line = ntyp, check_consistency = True)
+                atom_species, line = read_list(f, num_line = ntyp, check_consistency = True)
                 
                 #Create atom types list: [kind, mass, number]
                 atom_kinds = [(at[0], [at[0], float(at[1]), 0]) for at in atom_species]
@@ -281,13 +315,13 @@ def read_CP_input(file_path : str):
     
                 
             elif ('ATOMIC_POSITIONS' in line):
-                atom_pos = read_list(f, num_line = nat, check_consistency = False)
+                atom_pos, line = read_list(f, num_line = nat, check_consistency = False)
                 
                 #Counts the number of each different atom and insert its number
                 for at in atom_pos:
                     types[at[0]][2] += 1                  
                 
-                types = list(types.values())
+                # types = list(types.values())
 
     return iprint, dt, celldm, nat, ntyp, cell, types                           
                     
