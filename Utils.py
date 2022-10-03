@@ -108,7 +108,7 @@ def create_dir(dir_path : str):
 
 ###############################################################################
 
-def skip_lines(file : io.TextIOBase, lines_to_skip : int):
+def skip_lines(file : io.TextIOBase, lines_to_skip : int, n_line : int):
     
     #Check method functioning conditions
     if not isinstance(file, io.TextIOBase):
@@ -119,15 +119,16 @@ def skip_lines(file : io.TextIOBase, lines_to_skip : int):
     
     if not lines_to_skip > 0:
         raise ValueError('Number of lines to be skipped must be positive!')
-        
+    
     for i in range(lines_to_skip):
         line = file.readline()
+        n_line += 1
     
-    return line
+    return line, n_line
 
 ###############################################################################
 
-def read_tag(file : io.TextIOBase, search_list : list):
+def read_tag(file : io.TextIOBase, search_list : list, n_line : int):
     
     #Check method functioning conditions
     if not isinstance(file, io.TextIOBase):
@@ -147,24 +148,61 @@ def read_tag(file : io.TextIOBase, search_list : list):
     while line != '':
 
         line = file.readline()
-        if line == '': return found_dict, line
+        n_line += 1
+        
+        #EOF error
+        if line == '':
+            line = 'Error : EOF'
+            return found_dict, line, n_line
         
         for search in search_list:
             remove = None
             
             if search in line:
-                token = line.split('=')[1]
+                tokens = line.split('=')
+                
+                #Empty field error
+                if len(tokens) < 2:
+                    line = 'Error : Empty field'
+                    return found_dict, line, n_line
+                
+                token = tokens[1]
                 found_dict[search] = token
                 
                 remove = search
                 break
         
-        if remove != None: #Remove found elements from the search list
-            search_list.remove(remove)        
-            if len(search_list) == 0: #If search list is void return map with founds
-                return found_dict, line
+        #Remove found element from the search list
+        if remove != None:
+            search_list.remove(remove)
             
-    return found_dict, line
+            #If search list is void return map with founds and control line
+            if len(search_list) == 0: 
+                return found_dict, line, n_line
+            
+    return found_dict, line, n_line
+
+###############################################################################
+
+def errors_read_tag(file_path, tags_map, line):
+    
+    if 'EOF' in line:
+        not_found = [ele for ele in tags_map.keys() if tags_map[ele] == None]
+        ErrorMSG = 'EOF reached in file ' + file_path + ' while searching for '
+        for it in not_found: ErrorMSG += it+' '
+        raise ValueError(ErrorMSG)
+        
+    elif 'Empty field' in line:
+        
+        for tag, ele in tags_map.items():
+            
+            if ele == '':
+                empty = tag
+                break
+            
+        ErrorMSG = 'In file ' + file_path + ' empty field at tag: ' + empty
+        raise ValueError(ErrorMSG)
+    
 
 ###############################################################################
 
@@ -238,15 +276,18 @@ def read_list(file : io.TextIOBase, num_line : int = 0, check_consistency = True
 def read_CP_input(file_path : str):
     
     with open(file_path, 'r') as f:
-        for line in f:     
-            if line == '': break
+        
+        line = 'Start'
+        n_line = 0
+        while line != '':     
+            
+            line = f.readline()
             
             
             if '&CONTROL' in line:
                 tags = ['iprint', 'dt']
                 tags_map, line = read_tag(f, tags)
-                if line == '': 
-                    raise ValueError('Simulation input file is missing: ' %tags)
+                if 'Error = ' in line: errors_read_tag(file_path, tags_map, line)
                 
                 iprint = tags_map['iprint']
                 iprint = trim_string(iprint, mode='num')
@@ -327,10 +368,85 @@ def read_CP_input(file_path : str):
                     
 ###############################################################################
 
-
+def write_xyz(file : io.TextIOBase, data : tuple, header : str):
+    #Check method functioning conditions
+    if not isinstance(file, io.TextIOBase):
+        raise ValueError('The object passed is not a text file object!')
+    
+    if not isinstance(data, tuple):
+        raise ValueError('Data must be a tuple!')
+    
+    if not isinstance(header, str):
+        raise ValueError('Header must be a string!')
+    
+    nat_pos = len(data[1][:,0])
+    nat_lbl = len(data[0][:])
+    if nat_pos != nat_lbl:
+        raise ValueError('The row \'data\'[0] must have a size equal to the columns of \'data\'[1]!')
+    
+    file.writelines('%d \n' %nat_pos)
+    file.writelines(header+'\n')
+    for i, atom in enumerate(data[1]):
+        file.writelines('%4s %25.15f %25.15f %25.15f \n' %(data[0][i], atom[0], atom[1], atom[2]))
 
 ###############################################################################                
-                    
+           
+def write_info(file_path : str, info_data : list):
+    #Check method functioning conditions
+    if not isinstance(file_path, str):
+        raise ValueError('First argument must be a file path, it should be a str!')
+    
+    if not isinstance(info_data, list):
+        raise ValueError('Info_data must be a list!')
+    
+    if len(info_data) != 11:
+        raise ValueError('info_data must be a precise list of 11 elements!')
+    
+    with open(file_path, 'w') as f_info:
+        
+        cell = info_data[0]
+        f_info.writelines('Cell (angstrom):\n')
+        for i in range(3):
+            f_info.writelines('%15.10f %15.10f %15.10f' %(cell[i][0], cell[i][1], cell[i][2]))
+            f_info.writelines('\n')
+        
+        types = info_data[1]
+        f_info.writelines('\nAtom types (type|mass(a.m.u.)|#):\n')
+        for at in types:
+            f_info.writelines('%4s %10.4f %5d' %(at[0], at[1], at[2]))
+            f_info.writelines('\n')
+        
+        nat_tot = info_data[2]            
+        f_info.writelines('\nTotal atoms number = %d \n' %nat_tot)
+        
+        nat_qm = info_data[3]
+        f_info.writelines('\nQM atoms number = %d \n' %nat_qm)
+        
+        nat_gf = info_data[4]
+        f_info.writelines('\nGF atoms number = %d \n' %nat_gf)
+        
+        data_dt = info_data[5]
+        f_info.writelines('\nData time step = %10.9f fs\n' %data_dt)
+        
+        dt = info_data[6]
+        f_info.writelines('\nSimulation time step = %10.9f fs\n' %dt)
+        
+        step = info_data[7]
+        f_info.writelines('\nData step = %d \n' %step)
+        
+        data_step = info_data[8]
+        f_info.writelines('\nSimulation step =  %d \n' %data_step)
+        
+        #NAT for down slab (the frist one) corresponds to starting index upper layer!
+        f_info.writelines('\nSlabs info: (Slab \t #atoms \t Mass(a.m.u.))\n')
+        
+        dw_slab_num, dw_mass_slabs = info_data[9]
+        f_info.writelines('Lower \t %d \t %10.5f \n' %(dw_slab_num, dw_mass_slabs))
+        
+        up_slab_num, up_mass_slabs = info_data[10]
+        f_info.writelines('Upper \t %d \t %10.5f \n' %(up_slab_num, up_mass_slabs)) 
+
+###############################################################################              
                     
                     
                     

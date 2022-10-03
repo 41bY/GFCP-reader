@@ -5,126 +5,149 @@ Created on Sat Sep 10 16:09:07 2022
 @author: simula
 """
 import numpy as np
+import sys
+import Utils as ut
 from units import PhysConstants as phy
 
-system = '100H_1GPa_300K'
-
-DATA_path = './OUTPUT/'+system+'/'
-INFO_file = DATA_path+'info.txt'
-POS_file = DATA_path+'Pos.xyz'
-
-COM_file = DATA_path+'COM.dat'
-Z_file = DATA_path+'Slab_separation.dat'
-VCOM_file = DATA_path+'VCOM.dat'
-KIN_file = DATA_path+'Kinetics.txt'
-
-n_at_plane = 16
-types = ['C']
-    
-#Load atomic info
-with open(INFO_file, 'r') as f:
-    M = 0.0
-    at = {}
-    for line in f:
-        if 'Atom types' in line:
-            while(True):
-                line = next(f)
-                tokens = line.split()
-                if len(tokens) != 3: break
-                at[tokens[0]] = float(tokens[1])
-                M += float(tokens[1])*int(tokens[2])
+#Verify number of expected parameters
+if len(sys.argv) != 4:
+    if len(sys.argv) > 4:
+        raise ValueError('Too many arguments')
         
-        elif 'Atom number' in line:
-            nat = int(line.split(':')[1])
+    elif len(sys.argv) < 4:
+        raise ValueError('Too few arguments')
+        
+#Get simulation input and output files and output directory, verify existance
+INFO_fname = str(sys.argv[1])
+POS_fname = str(sys.argv[2])
+DATA_path = str(sys.argv[3])
+ut.check_file_existance(INFO_fname)
+ut.check_file_existance(POS_fname)
+ut.create_dir(DATA_path)
 
-        elif 'Data time step' in line:
-            token = line.split(':')[1].split('fs')[0]
-            dt = float(''.join([c for c in token if c in '0123456789.']))
+#Create output files
+VEL_fname = DATA_path+'Vel.xyz'
+VCOM_fname = DATA_path+'VCOM.dat'
+RCOM_fname = DATA_path+'RCOM.dat'
+
+#Open output files to write them in the main loop
+f_VEL = open(VEL_fname, 'w')
+f_VCOM = open(VCOM_fname, 'w')
+f_VCOM.writelines('Relative slabs center of mass velocity: TimeStep(fs) Vx Vy Vz(m/s) \n')
+f_RCOM = open(RCOM_fname, 'w')
+f_RCOM.writelines('Relative slabs center of mass position: TimeStep(fs) Rx Ry Rz(angstrom) \n')
+
+#Load atomic info
+with open(INFO_fname, 'r') as f:
+
+    line = 'Start'
+    while line != '':
+        
+        line = f.readline()
+        
+        if 'Atom types' in line:
+            atoms, line = ut.read_list(f, num_line = 0, check_consistency = True)
+            if line == '': break
             
+            types = dict([[atom[0], float(atom[1])] for atom in atoms])
+
         elif 'Slabs info' in line:
-            line = next(f)
-            M_dw = float(line.split()[1])
+            slabs, line = ut.read_list(f, num_line = 2, check_consistency = True)
+            if line == '': break
             
-            line = next(f)
-            M_up = float(line.split()[1])             
-            
-        elif 'Ordering POS, VEL for QM atoms' in line:
-            up_QM_init = int(line.split('slab start at')[1])
-            tokens = next(f).split()
-            order_QM = [int(i) for i in tokens]
-            
-        elif 'Ordering POS, VEL for GF atoms' in line:
-            up_GF_init = int(line.split('slab start at')[1])
-            tokens = next(f).split()
-            order_GF = [int(i) for i in tokens]            
-            
-            
-#Create relative COM, relative VEL, slab separation and save them to file
-Rcom = []
-Dz = []
-Vcom = []
-with open(POS_file, 'r') as f:
-    step = -1
-    for line in f:
-        if 'ATOMIC_POSITIONS' in line:
-            at_list = []
-            for i in range(nat):
-                line = next(f)
-                tokens = line.split()
-                if len(tokens) != 4: break
-                if 'gf' in tokens[0]: break
-                at_list.append(tokens)
-                
-            #Order atoms in ascending z-coordinate
-            at_list_ord = np.array(at_list)[order_QM]
-            wgts = [at[atom[0]] for atom in at_list_ord]
-            
-            #Calculate relative COM separation
-            com_dw = np.average(at_list_ord[:up_QM_init,1:].astype(float), \
-                                axis=0, weights=wgts[:up_QM_init])
-            
-            com_up = np.average(at_list_ord[up_QM_init:,1:].astype(float), \
-                                axis=0, weights=wgts[up_QM_init:])
-            com = com_up - com_dw
-            Rcom.append(com)
-            
-            #Calculate slab separation
-            z_pos_dw = np.array([float(atom[3]) for atom in at_list_ord[:up_QM_init]\
-                                 if atom[0] in types])[-n_at_plane:]
-                
-            z_pos_up = np.array([float(atom[3]) for atom in at_list_ord[up_QM_init:]\
-                                 if atom[0] in types])[:n_at_plane]                    
-            
-            z_dw = np.average(z_pos_dw)
-            z_up = np.average(z_pos_up)
-            Dz.append(z_up - z_dw)
-            
-            step += 1
+            up_slab_index = int(slabs[0][1])
+            mass_slabs = [float(slab[2]) for slab in slabs]
 
-Time_pos = dt*np.arange(0, step+1, 1)
-Rcom = np.array(Rcom) - np.array([Rcom[0][0], Rcom[0][1], 0.0])
-Zsep = np.array(Dz)
-Vcom = ((Rcom[1:]-Rcom[:-1])/dt)*phy.AonFS_to_MonS #m/s 
-Time_vel = (Time_pos[1:] + Time_pos[:-1])/2
-
-avg_sep = np.average(Zsep)
-std_sep = np.std(Zsep)
-
-avg_Vcom = np.average(Vcom, axis=0)
-std_Vcom = np.std(Vcom, axis=0)
-
-with open(KIN_file, 'w') as f_out:
-    f_out.writelines('Average slab (C-C) separation (Angstrom): %10.5f +- %5.2f \n' %(avg_sep, std_sep))
-    f_out.writelines('Average COM relative velocity: Vx Vy Vz (m/s) \n')
-    for i in range(3):
-        f_out.writelines('\t %10.5f +- %5.2f' %(avg_Vcom[i], std_Vcom[i]))
-
-np.savetxt(COM_file, np.column_stack((Time_pos, Rcom)),\
-           header='Time(fs) Relative COM: X Y Z(Angstrom)')
-
-np.savetxt(Z_file, np.column_stack((Time_pos, Zsep)),\
-           header='Time(fs) C-C slab separation(Angstrom)')
+            
+            
+#Create 'Vel.xyz', 'COM.dat' and 'VCOM.dat' using 'Pos.xyz'
+with open(POS_fname, 'r') as f:
     
-np.savetxt(VCOM_file, np.column_stack((Time_vel, Vcom)),\
-           header='Time(fs) Relative VCOM: Vx Vy Vz(m/s)')   
+    #Initialize main variables
+    line = 'Start'
+    step = -1
+    while line != '':
+        
+        line = f.readline()
+        if line == '': break
+        nat = int(line) #Number of atoms is expected in a '.xyz'
+        
+        line = f.readline()
+        if line == '': break
+        time = float(line.split('=')[1]) #Number of atoms is expected in a '.xyz'        
 
+        #Read atom positions and create label and pos arrays
+        atoms, line = ut.read_list(f, num_line = nat, check_consistency = True)
+        at_lbl = []
+        at_pos = []
+        for atom in atoms:
+            at_lbl.append(atom[0])
+            at_pos.append(atom[1:])
+        at_pos = np.array(at_pos, dtype=float)   
+            
+        #At the first iteration: calculate weigths array to obtain RCOM and VCOM
+        #Save position and times to calculate velocity at the next next iteration
+        if step < 0:
+            at_pos_2old = at_pos
+            time_2old = time
+            
+            n_gf_slabs = [0, 0]
+            weigths = []
+            for i, lbl in enumerate(at_lbl):
+                if i < up_slab_index:
+                    if 'gf' in lbl:
+                        n_gf_slabs[0] += 1
+                        continue
+                    else:
+                        weigth = -types[lbl]/mass_slabs[0]
+                
+                else:
+                    if 'gf' in lbl:
+                        n_gf_slabs[1] += 1
+                        continue
+                    else:
+                        weigth = types[lbl]/mass_slabs[1]
+                weigths.append(weigth)
+            weights = np.array(weigths, dtype=float)
+            
+        
+        #Save position and times to calculate velocity at the next iteration
+        elif step == 0:
+            at_pos_1old = at_pos
+            time_1old = time
+            
+        #Calculate velocity with velocity Verlet and write velocity files: 'vel.xyz', 'VCOM.dat'
+        elif step > 0:
+            time_vel = (time + time_2old)/2
+            dt = (time - time_2old)
+            at_vel = (at_pos - at_pos_2old)/dt
+            at_vel = at_vel*phy.AonFS_to_MonS
+
+            at_pos_2old = at_pos_1old
+            time_2old = time_1old
+            
+            at_pos_1old = at_pos
+            time_1old = time
+            
+            VCOM = np.dot(weights, at_vel[n_gf_slabs[0]:-n_gf_slabs[0]])
+            
+            #Write the .xyz file: 'Vel.xyz'
+            header = ('ATOMIC_VELOCITIES (m/s) at time (fs) = %15.10f' %time_vel)
+            data = (at_lbl, at_vel)
+            ut.write_xyz(file = f_VEL, data = data, header = header)
+            
+            #Write the .dat file: 'VCOM.dat'
+            f_VCOM.writelines('%15.10f %25.15f %25.15f %25.15f \n' %(time_vel, VCOM[0], VCOM[1], VCOM[2]))
+        
+        #Calculate RCOM           
+        RCOM = np.dot(weights, at_pos[n_gf_slabs[0]:-n_gf_slabs[0]])
+        
+        #Write the .dat file: 'RCOM.dat'
+        f_RCOM.writelines('%15.10f %25.15f %25.15f %25.15f \n' %(time, RCOM[0], RCOM[1], RCOM[2]))
+        
+        #Step counts total iteration number
+        step += 1
+
+f_VEL.close()
+f_VCOM.close()
+f_RCOM.close()
