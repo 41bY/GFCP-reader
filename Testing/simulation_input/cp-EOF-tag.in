@@ -1,0 +1,24 @@
+&CONTROL
+   title = ' c111 slab ',
+   calculation = 'cp'
+   restart_mode='restart',
+   ndr = 104,
+   ndw = 105,
+   nstep = 13000,
+   iprint = 10,
+   isave  = 100,
+   tstress = .TRUE.,
+   tprnfor = .TRUE.,
+   dt = 4.0d0,
+   etot_conv_thr=1.0e-5,
+   forc_conv_thr=1.0e-4,
+   ekin_conv_thr = 1.0e-6,
+   prefix='c111-4by2-50%',
+   pseudo_dir='../../PSEUDO/',
+   outdir='./OUT/'
+   max_seconds = 85800 
+ /
+&SYSTEM
+   ibrav=0,
+   celldm(1)=4.780425
+   nat=240,

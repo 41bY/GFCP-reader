@@ -19,7 +19,7 @@ Simulation time step = 0.096756000 fs
 
 Data step = 11 
 
-Simulation step (11xData step) =  110 
+Simulation step =  100 
 
 Slabs info: (Slab 	 #atoms 	 Mass(a.m.u.))
 Lower 	 136 	 1201.29840 
