@@ -12,8 +12,8 @@ def read_ref_output(file_path : str):
     'main' program of this module. It reads a 'gfcp.out' output file and it controls
     the other methods below. Open the 'gfcp.out' output file and read it in block
     which is controlled by the tag 'kt_gf'. This is done because 'gfcp.out' is
-    usually a very large file but it is structured in 'iteration block' and each
-    block has the same format of the others.
+    usually a very large file but it is structured in 'iteration blocks' and each
+    block has the same format as the others.
     The objective of this method is to read a reference block in order to get
     the indeces of each relevant tag within the block and thus speeding up the
     'real' reading.
@@ -25,42 +25,23 @@ def read_ref_output(file_path : str):
 
     Raises
     ------
-    errors
-        Inside 'check_founds' if the 'cp.x' is corrupted.
-
-    Returns
-    -------
-    found_list : list
-        Output list containing the values associated to each tag of the proper
-        type depending on the tag: 
-        'iprint' -> int; 'dt' -> float; 'celldm' -> float; 'nat' -> int; 'ntyp' -> int;
-        'CELL_PARAMETERS' -> np.array(float); 'ATOMIC_SPECIES' -> list of [str, float];
-        'ATOMIC_POSITIONS' -> list of str
-
-    Parameters
-    ----------
-    file_path : str
-        DESCRIPTION.
-
-    Raises
-    ------
     ValueError
-        DESCRIPTION.
+        If the first iteration block does not contain the relevant tags.
 
     Returns
     -------
-    tags_line_num : TYPE
-        DESCRIPTION.
-    block_size : TYPE
-        DESCRIPTION.
-    qm_label : TYPE
-        DESCRIPTION.
-    nat_gf : TYPE
-        DESCRIPTION.
-    idx_z_sort : TYPE
-        DESCRIPTION.
-    up_slab_idx : TYPE
-        DESCRIPTION.
+    tags_line_num : list of int
+        List of index associated to each relevant tag.
+    block_size : int
+        Number of lines in the iteration block
+    qm_label : list of str
+        List of atomic labels of every qm atom in the output file
+    nat_gf : int
+        Number of gf atoms i.e. number of lines associated to the tag 'GF_ATOM_POSITION'
+    idx_z_sort : np.ndarray of int
+        Indeces to sort all the atoms (qm+gf) along the z-direction
+    up_slab_idx : int
+        Index separating upper slab from lower slab
 
     """
     
@@ -75,7 +56,7 @@ def read_ref_output(file_path : str):
     line = next(file)
     if not (ref_tag in line): raise ValueError('Output file format is not as expected!')
     
-    #Read an iteration block
+    #Read the first iteration block
     block = read_ref_block(file, ref_tag)
     block = [line] + block
     block_size = len(block)
@@ -102,6 +83,24 @@ def read_ref_output(file_path : str):
 ###############################################################################
 
 def read_ref_block(file : io.TextIOBase, ref_tag : str):
+    """
+    Read an iteration block from the output file. Each line is added to a read 
+    list. The reading stops when the tag ('kt_gf') is met which signals the start
+    of a new block.
+
+    Parameters
+    ----------
+    file : io.TextIOBase
+        File object corresponding to simulation output file
+    ref_tag : str
+        Tag that signals the reading stop ('kt_gf')
+
+    Returns
+    -------
+    block : list of str
+        List of lines contained in an iteration block.
+
+    """
     
     block = []
     for line in file:
@@ -114,6 +113,21 @@ def read_ref_block(file : io.TextIOBase, ref_tag : str):
 ###############################################################################
 
 def find_tags_positions(input_list : list):
+    """
+    Search within a the list of the iteration block, the relevant tags.
+    Store their index within an iteration block.
+
+    Parameters
+    ----------
+    input_list : list of str
+        Iteration block read list.
+
+    Returns
+    -------
+    line_num : list of int
+        List of indeces associated to each relevant tag within an iteration block.
+
+    """
     
     line_num = []
     for n, line in enumerate(input_list):
@@ -141,6 +155,24 @@ def find_tags_positions(input_list : list):
 ###############################################################################
 
 def get_qm_atoms(input_list : list):
+    """
+    Get qm atom labels and coordinates from the sliced iteration block
+    corresponding to the tag 'ATOMIC_POSITIONS'.
+
+    Parameters
+    ----------
+    input_list : list of str
+        Sliced iteration block corresponding to the tag 'ATOMIC_POSITIONS'.
+
+    Returns
+    -------
+    qm_lbl : list of str
+        List containing labels of qm atoms.
+    qm_pos : list of list of str
+        (nat_qm x 3)-dimensional matrix containing the string values of the 
+        qm atom coordinates. With nat_qm is the number of qm atoms.
+
+    """
     
     qm_lbl = []
     qm_pos = []
@@ -160,6 +192,23 @@ def get_qm_atoms(input_list : list):
 ###############################################################################
 
 def get_gf_atoms(input_list : list):
+    """
+    Get gf atom coordinates and gf atoms number.
+
+    Parameters
+    ----------
+    input_list : list of str
+        Sliced iteration block corresponding to the tag 'GF_ATOM_POSITIONS'.
+
+    Returns
+    -------
+    n : int
+        Number of gf atoms.
+    gf_pos : list of list of str
+        (nat_gf x 3)-dimensional matrix containing the string values of the 
+        gf atom coordinates. With nat_gf is the number of gf atoms.
+
+    """
     
     gf_pos = []
     for n, line in enumerate(input_list):
@@ -173,6 +222,24 @@ def get_gf_atoms(input_list : list):
 ###############################################################################
 
 def sort_atoms(input_list : list):
+    """
+    Sort atomic coordinate list along the z-direction and gives back the sorted
+    indeces and the index corresponding to maximum separation i.e. upper slab start.
+
+    Parameters
+    ----------
+    input_list : list of list of str
+        (nat x 3)-dimensional matrix containing the string values of the 
+        atom coordinates. With nat is the number of atoms.
+
+    Returns
+    -------
+    idx_z_sort : np.ndarray of int
+        Indeces to sort the atoms along the z-direction
+    up_slab_index : int
+        Index separating upper slab from lower slab
+
+    """
     
     z_pos = [atom[2] for atom in input_list]
     z_pos = np.array(z_pos, dtype=float)
