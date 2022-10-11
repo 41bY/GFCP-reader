@@ -404,7 +404,7 @@ def test_check_founds():
                     [['C',' 12.012'],['H',' 2.012',],['Fe','54.012']], \
                     ['C', 'H', 'Fe']]
         
-    found_list = ri.check_founds(founds)
+    found_list, err_msg = ri.check_founds(founds)
     
     assert  isinstance(found_list[0], int)
     assert  isinstance(found_list[1], float)
@@ -414,5 +414,6 @@ def test_check_founds():
     assert  isinstance(found_list[5], np.ndarray)
     assert  isinstance(found_list[6], list)
     assert  isinstance(found_list[7], list)
+    assert err_msg == ''
 
 ###############################################################################
