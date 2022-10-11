@@ -44,7 +44,7 @@ This program relies on three 'main' modules [Read_input.py](https://github.com/4
 
 4. [Read_output.py](https://github.com/41bY/GFCP-reader/blob/master/Read_output.py) This module contains utility routines for the main program [Extract.py](https://github.com/41bY/GFCP-reader/blob/master/Extract.py), to efficiently read the GF-CP output file. These routines relies on parameters provided by the 'action' of the module [Read_reference_output.py](https://github.com/41bY/GFCP-reader/blob/master/Read_reference_output.py). [Test_Read_output.py](https://github.com/41bY/GFCP-reader/blob/master/Test_Read_output.py) is its respective testing module.
 
-5. [Utils.py](https://github.com/41bY/GFCP-reader/blob/master/Utils.py) Small modules containing a trimming method and conversion factors for physical units.
+5. [Utils.py](https://github.com/41bY/GFCP-reader/blob/master/Utils.py) Small modules containing a trimming method and conversion factors for physical units. [Test_Utils.py](https://github.com/41bY/GFCP-reader/blob/master/Test_Utils.py) is its respective testing module.
 
 6. [Testing](https://github.com/41bY/GFCP-reader/tree/master/Testing) This folder contains three folders for high level testing of the program and provide examples of output files.
 In particular the folder [simulation_input](https://github.com/41bY/GFCP-reader/tree/master/Testing/simulation_input) contains a valid input file [cp.in](https://github.com/41bY/GFCP-reader/blob/master/Testing/simulation_input/cp.in) and various corrupted inputs 'cp-*'.
