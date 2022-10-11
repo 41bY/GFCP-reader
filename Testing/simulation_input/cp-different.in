@@ -1,0 +1,71 @@
+&CONTROL
+   title = ' c111 slab ',
+   calculation = 'cp'
+   restart_mode='restart',
+   ndr = 104,
+   ndw = 105,
+   nstep = 13000,
+   iprint = 10,
+   isave  = 100,
+   tstress = .TRUE.,
+   tprnfor = .TRUE.,
+   dt = 4.0d0,
+   etot_conv_thr=1.0e-5,
+   forc_conv_thr=1.0e-4,
+   ekin_conv_thr = 1.0e-6,
+   prefix='c111-4by2-50%',
+   pseudo_dir='../../PSEUDO/',
+   outdir='./OUT/'
+   max_seconds = 85800 
+ /
+&SYSTEM
+   ibrav=0,
+   celldm(1)=4.780425
+   nat=10,
+   ntyp=2,
+   ecutwfc=25.0,
+   ecutrho=250.0,
+   nosym=.true.
+   nr1b = 24,
+   nr2b = 24,
+   nr3b = 24
+/
+&ELECTRONS
+   emass = 100.0d0
+   emass_cutoff = 3.0d0
+   conv_thr =  1.0d-6,
+   orthogonalization = 'ortho'
+   !!! dynamics
+   electron_dynamics = 'verlet'
+   electron_velocities = 'default'
+   !!! thermostat
+   electron_temperature = 'nose'
+   fnosee=80
+   ekincw=0.25D0
+/
+&IONS
+!!! dynamics
+   ion_dynamics='verlet'
+   ion_velocities='default'
+!!! for gfmd
+   ion_temperature = 'not_controlled'
+   tempw=300.0d0,
+/
+CELL_PARAMETERS
+   4.000000000   0.00000000   0.000000000
+   0.000000000   3.46410162   0.000000000
+   0.000000000   0.00000000   10.4
+ATOMIC_SPECIES
+  C 12.01  C.pbe-van_bm.UPF
+  H 2.0141 H.pbe-van_bm.UPF
+ATOMIC_POSITIONS {alat}
+H 0.000000 1.732045 8.574011
+H 3.499999 2.598073 8.574012
+H 2.499999 2.598073 8.574012
+H 2.999999 1.732045 8.574011
+H 1.999999 1.732045 8.574011
+C 0.000000 0.577349 7.940940
+C 0.500000 1.443375 7.940937
+C 1.500000 1.443375 7.940937
+C 0.500000 1.443376 7.326365
+C 1.500000 1.443376 7.326365

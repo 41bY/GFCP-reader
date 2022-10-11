@@ -4,14 +4,18 @@ Created on Sat Oct  1 10:22:10 2022
 
 @author: simula
 """
-import numpy as np
 import os
 import io
-from units import PhysConstants as phy
+
+###############################################################################
+#Conversion factor
+
+hatime2fs = 0.024189 #Hartree time to femtoseconds
+bohr2angstrom = 0.529177 #Bohr to angstrom
 
 ###############################################################################
 
-def trim_string(in_str : str, mode = 'num'):
+def trim_string(in_str : str, mode = 'alpha-num', trim_from = ''):
     """
     Trim a string depending on 'mode' values. Default 'mode' is set to 'num'
     which stands for numeric. Other default implementation is 'alpha' which
@@ -35,15 +39,17 @@ def trim_string(in_str : str, mode = 'num'):
         The trimmed string starting by 'in_str' based on 'mode'.
 
     """
+    if mode == 'alpha-num':
+        out_str = ''.join([c for c in in_str if c in '0123456789.abcdefghkjilmnopqrstuvwxyz'])    
     
-    if mode == 'num':
-        out_str = ''.join([c for c in in_str if c in '0123456789.'])
+    elif mode == 'num':
+        out_str = ''.join([c for c in in_str if c in '0123456789.+-'])
     
     elif mode == 'alpha':
         out_str = ''.join([c for c in in_str if c in 'abcdefghkjilmnopqrstuvwxyz'])
     
     else:
-        out_str = ''.join([c for c in in_str if c in mode])
+        out_str = ''.join([c for c in in_str if c in trim_from])
     
     return out_str
 
@@ -128,7 +134,7 @@ def skip_lines(file : io.TextIOBase, lines_to_skip : int, n_line : int):
 
 ###############################################################################
 
-def read_tag(file : io.TextIOBase, search_list : list, n_line : int):
+def read_tag(file : io.TextIOBase, search_list : list):
     
     #Check method functioning conditions
     if not isinstance(file, io.TextIOBase):
@@ -140,11 +146,11 @@ def read_tag(file : io.TextIOBase, search_list : list, n_line : int):
     for search in search_list:
         if not isinstance(search, str):
             raise ValueError('The search list must contain only strings!')
-        
     
     found_dict = dict.fromkeys(search_list)
     
     line = 'Start'
+    n_line = 0
     while line != '':
 
         line = file.readline()
@@ -152,7 +158,7 @@ def read_tag(file : io.TextIOBase, search_list : list, n_line : int):
         
         #EOF error
         if line == '':
-            line = 'Error : EOF'
+            line = 'ERROR_read_tag = EOF'
             return found_dict, line, n_line
         
         for search in search_list:
@@ -161,9 +167,10 @@ def read_tag(file : io.TextIOBase, search_list : list, n_line : int):
             if search in line:
                 tokens = line.split('=')
                 
-                #Empty field error
+                #Corrupted field error
                 if len(tokens) < 2:
-                    line = 'Error : Empty field'
+                    line = 'ERROR_read_tag = Corrupted field'
+                    found_dict[search] = ''
                     return found_dict, line, n_line
                 
                 token = tokens[1]
@@ -184,29 +191,31 @@ def read_tag(file : io.TextIOBase, search_list : list, n_line : int):
 
 ###############################################################################
 
-def errors_read_tag(file_path, tags_map, line):
+def errors_read_tag(file_path, tags_map, line, n_line):
     
     if 'EOF' in line:
         not_found = [ele for ele in tags_map.keys() if tags_map[ele] == None]
-        ErrorMSG = 'EOF reached in file ' + file_path + ' while searching for '
-        for it in not_found: ErrorMSG += it+' '
+        not_found_MSG = ''
+        for nf in not_found: not_found_MSG += nf+' '
+        
+        ErrorMSG = 'EOF reached in file \'' + file_path + '\' at line '+ str(n_line) \
+            + ': ' + not_found_MSG + 'not found!'
         raise ValueError(ErrorMSG)
         
-    elif 'Empty field' in line:
-        
+    elif 'Corrupted field' in line:
         for tag, ele in tags_map.items():
-            
             if ele == '':
                 empty = tag
                 break
             
-        ErrorMSG = 'In file ' + file_path + ' empty field at tag: ' + empty
+        ErrorMSG = 'In file \'' + file_path + '\' ,corrupted field for tag: \'' + empty + \
+            '\' at line ' + str(n_line)
         raise ValueError(ErrorMSG)
     
 
 ###############################################################################
 
-def read_list(file : io.TextIOBase, num_line : int = 0, check_consistency = True):
+def read_list(file : io.TextIOBase, num_line : int = 0, num_col : int = 1):
     
     #Check method functioning conditions
     if not isinstance(file, io.TextIOBase):
@@ -215,157 +224,71 @@ def read_list(file : io.TextIOBase, num_line : int = 0, check_consistency = True
     if not isinstance(num_line, int):
         raise ValueError('\'num_line\' parameter must be integer!')
     
-    if (num_line == 0) & (not check_consistency):
-        raise ValueError('\'num_line\' parameter must be greater than zero if \
-                         consistency reading is disabled!')
+    if num_col < 1:
+        raise ValueError('\'num_col\' parameter must be greater than zero!')
     
     
     out_list = []
+    n_line = 0
     
-    if num_line > 1: #Read 'num_line' lines
+    #Read 'num_line' lines
+    if num_line > 1: 
         
-        begin = True
         for n in range(num_line):
             
             line = file.readline()
-            if line == '': return out_list, line
+            n_line += 1
             
-            token = line.split()
+            #EOF error
+            if line == '': 
+                line = 'ERROR_read_list = EOF'
+                return out_list, line, n_line
             
-            if check_consistency:
-                if begin: 
-                    ref = len(token)
-                    begin = False
-                else:
-                    n_token = len(token)
-                    if n_token != ref:
-                        raise ValueError('Inconsistent number of columns in read list: \
-                                         check the read file or the number of lines to\
-                                         be read')                     
+            tokens = line.split()
+            #Inconsistent read error
+            if len(tokens) < num_col:
+                line = 'ERROR_read_list = Inconsistency'
+                return out_list, line, n_line
             
-            out_list.append(token)
+            out_list.append(tokens)
         
-        return out_list, line
+        return out_list, line, n_line
             
             
-    elif num_line == 0: #Read lines consistently
+    #Read lines consistently based on num_col
+    elif num_line == 0:
         
-        begin = True
         line = 'Start'
         while line != '':
             
             line = file.readline()
-            if line == '': return out_list, line
+            n_line += 1
+            #EOF may not be an error in this case
+            if line == '': return out_list, line, n_line
             
-            token = line.split()
-
-            if begin: 
-                ref = len(token)
-                begin = False
-            else:
-                n_token = len(token)
-                if n_token != ref:
-                    break
-                                          
-            out_list.append(token)
+            tokens = line.split()
+            #Consistent reading condition
+            if len(tokens) != num_col:
+                break
+            
+            out_list.append(tokens)
         
-        return out_list, line
+        return out_list, line, n_line
 
 ###############################################################################
 
-def read_CP_input(file_path : str):
+def errors_read_list(file_path, line, n_line):
     
-    with open(file_path, 'r') as f:
+    if 'EOF' in line:
+        ErrorMSG = 'EOF reached while parsing file \'' + file_path \
+            + '\' at line '+ str(n_line) +'!'
+        raise ValueError(ErrorMSG)
         
-        line = 'Start'
-        n_line = 0
-        while line != '':     
-            
-            line = f.readline()
-            
-            
-            if '&CONTROL' in line:
-                tags = ['iprint', 'dt']
-                tags_map, line = read_tag(f, tags)
-                if 'Error = ' in line: errors_read_tag(file_path, tags_map, line)
-                
-                iprint = tags_map['iprint']
-                iprint = trim_string(iprint, mode='num')
-                iprint = int(iprint)
-                
-                dt = tags_map['dt']
-                dt = trim_string(dt, mode='num')
-                dt = float(dt)*2.4189*0.01 #fs
-                    
-            
-            elif '&SYSTEM' in line:
-                tags = ['celldm', 'nat', 'ntyp']
-                tags_map, line = read_tag(f, tags)
-                if line == '': 
-                    raise ValueError('Simulation input file is missing: ' %tags)
-                
-                celldm = tags_map['celldm']
-                celldm = trim_string(celldm, mode='num')
-                celldm = float(celldm)
-                
-
-                nat = tags_map['nat']
-                nat = trim_string(nat, mode='num')
-                nat = int(nat)
-                
-                ntyp = tags_map['ntyp']
-                ntyp = trim_string(ntyp, mode='num')
-                ntyp = int(ntyp)
+    elif 'Inconsistency' in line:
+        ErrorMSG = 'Inconsistent read while parsing the file \'' + file_path \
+            + '\' at line '+ str(n_line) +'!'
+        raise ValueError(ErrorMSG)
         
-        
-            elif ('CELL_PARAMETERS' in line):
-                token = line.split()
-                
-                #Read the unit length and convert it in Angstrom
-                if len(token) > 1: #User defined unit length
-                    unit = token[1]
-                    unit = trim_string(unit, mode='alpha')
-                    
-                    if unit == 'bohr':
-                        cell_unit = phy.bohr_to_A
-                    
-                    elif unit == 'alat':
-                        cell_unit = celldm*phy.bohr_to_A
-                    
-                    elif unit == 'angstrom':
-                        cell_unit = 1.0
-                        
-                    else:
-                        raise ValueError('Improper unit used in CELL_PARAMETERS\
-                                         : %s' %unit)
-                        
-                else: #QE default unit length
-                    cell_unit = celldm*phy.bohr_to_A
-                
-                #Read the cell parameters              
-                cell, line = read_list(f, num_line = 3, check_consistency = True)
-                cell = cell_unit*np.array(cell, dtype=float)
-                
-                
-            elif ('ATOMIC_SPECIES' in line):
-                atom_species, line = read_list(f, num_line = ntyp, check_consistency = True)
-                
-                #Create atom types list: [kind, mass, number]
-                atom_kinds = [(at[0], [at[0], float(at[1]), 0]) for at in atom_species]
-                types = dict(atom_kinds)
-    
-                
-            elif ('ATOMIC_POSITIONS' in line):
-                atom_pos, line = read_list(f, num_line = nat, check_consistency = False)
-                
-                #Counts the number of each different atom and insert its number
-                for at in atom_pos:
-                    types[at[0]][2] += 1                  
-                
-                # types = list(types.values())
-
-    return iprint, dt, celldm, nat, ntyp, cell, types                           
-                    
 ###############################################################################
 
 def write_xyz(file : io.TextIOBase, data : tuple, header : str):
