@@ -253,7 +253,7 @@ def write_xyz(file : io.TextIOBase, data_label : list, data_xyz : list, header :
 
 ###############################################################################
 
-def Error_msg(iteration : int,  num_relax : int, block_size : int , num_line_block : int):
+def Error_msg_line(iteration : int,  num_relax : int, block_size : int , num_line_block : int):
     """
     Construct an error message indicating the line where the error has occured.
 
@@ -284,6 +284,27 @@ def Error_msg(iteration : int,  num_relax : int, block_size : int , num_line_blo
 ###############################################################################
                 
 def initialize_output_files(path : str):
+    """
+    Given a 'path' open the different files that has to be written.
+    Write header lines on them.
+
+    Parameters
+    ----------
+    path : str
+        Path of the output files.
+
+    Returns
+    -------
+    f_TEM : io.TextIOBase
+        Temperature file object.
+    f_FOR_up : io.TextIOBase
+        Forces up file object.
+    f_FOR_dw : io.TextIOBase
+        Forces down file object.
+    f_POS : io.TextIOBase
+        xyz file object.
+
+    """
     
     TEM_fname = path+'Temp.dat'
     FUP_fname = path+'Forces_gf_up.dat'
@@ -305,6 +326,37 @@ def initialize_output_files(path : str):
 ###############################################################################
                 
 def get_str_values(block : list, tags_num : list, nat_qm : int, nat_gf : int):
+    """
+    Given the indeces associated to each tags, slice the block_list accordingly
+    and assign the slices to each variables.
+
+    Parameters
+    ----------
+    block : list of str
+        Block list containing the lines of the block iteration.
+    tags_num : list of int
+        Indeces within the block associated to each tag.
+    nat_qm : int
+        Number of lines to slice when the tag is 'ATOMIC_POSITIONS'
+    nat_gf : int
+        Number of lines to slice when the tag is 'GF_ATOM_POSITIONS'
+
+    Returns
+    -------
+    temp_str : str
+        Line containing temperature.
+    fup_str : str
+        Line containing Fup.
+    fdw_str : str
+        Line containing Fdw.
+    control_str : str
+        Line containing control string.
+    qm_atoms_str_list : list of str
+        List containing qm_atoms.
+    gf_atoms_str_list : list of str
+        List containing gf_atoms.
+
+    """
     
     temp_str = block[tags_num[0]]
     fup_str = block[tags_num[1]]
@@ -318,6 +370,24 @@ def get_str_values(block : list, tags_num : list, nat_qm : int, nat_gf : int):
 ###############################################################################
                 
 def order_all_atoms(list_a : list, list_b : list, idx_sort : list):
+    """
+    Join qm and gf atoms in a unique list and order them.
+
+    Parameters
+    ----------
+    list_a : list of str
+        List of qm atoms
+    list_b : list of str
+        List of gf atoms
+    idx_sort : np.ndarray of int
+        List of indeces to sort atoms as the reference one.
+
+    Returns
+    -------
+    lis_ord : list of str
+        List of all the atoms (qm+gf) ordered.
+
+    """
     
     list_tot = list_a + list_b
     lis_ord = np.array(list_tot, dtype=str)
@@ -328,21 +398,48 @@ def order_all_atoms(list_a : list, list_b : list, idx_sort : list):
 ###############################################################################
 
 def get_formatted_data(time : float, temp : float, fup : list, fdw : list, atoms : np.ndarray):
-    atom_pos = atoms[:,1:].astype(float)
-    atom_label = atoms[:,0]
+    """
+    Format the data types to be written to file. Join lists of Temperature and
+    Forces data with time data and prepare header for writing .xyz.
+
+    Parameters
+    ----------
+    time : float
+        Data step time
+    temp : float
+        Temperature at that step
+    fup : list
+        Force up at that step
+    fdw : list
+        DESCRIPTION.
+    atoms : np.ndarray
+        DESCRIPTION.
+
+    Returns
+    -------
+    tempVStime : List of list of float
+        1x2 matrix containing time and temperature
+    fupVStime : List of list of float
+        1x2 matrix containing time and Force up
+    fdwVStime : List of list of float
+        1x2 matrix containing time and Force down
+    atom_label : np.ndarray of str
+        Containing labels of each atom
+    atom_pos : np.ndarray of float
+        natx3 matrix containing x,y,z coordinates of each atom
+    header : str
+        Containing header for the .xyz file
+
+    """
     
     tempVStime = [[time, temp]]
     fupVStime = [[time]+fup]
     fdwVStime = [[time]+fdw]
     
-    nat = atoms[:,0].size
+    atom_pos = atoms[:,1:].astype(float)
+    atom_label = atoms[:,0]
+    
+    nat = atom_label.size
     header = str(nat)+'\nATOMIC_POSITIONS (angstrom); time (fs) = %10.6f \n' %time
     
     return tempVStime, fupVStime, fdwVStime, atom_label, atom_pos, header
-
-
-
-
-
-
-

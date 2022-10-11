@@ -10,6 +10,50 @@ import Utils as ut
 
 ###############################################################################
 
+def read_CP_input(file_path : str):
+    """
+    'main' program of this module. It reads a 'cp.x' input file and it controls
+    the other methods above. Open the 'cp.x' input file, load it into list of str,
+    call 'search_input_tags' to get the string values associated to the tags and
+    perform checks on them by calling 'check_founds'.
+    It returns the list of founds associated to the tags.
+
+    Parameters
+    ----------
+    file_path : str
+        'cp.x' input file path.
+
+    Raises
+    ------
+    errors
+        Inside 'check_founds' if the 'cp.x' is corrupted.
+
+    Returns
+    -------
+    found_list : list
+        Output list containing the values associated to each tag of the proper
+        type depending on the tag: 
+        'iprint' -> int; 'dt' -> float; 'celldm' -> float; 'nat' -> int; 'ntyp' -> int;
+        'CELL_PARAMETERS' -> np.array(float); 'ATOMIC_SPECIES' -> list of [str, float];
+        'ATOMIC_POSITIONS' -> list of str
+
+    """
+
+    #Input files are small so they can be load into memory
+    file = open(file_path, 'r')
+    lines = file.readlines()
+    file.close()
+    
+    #Search tags in lines and returns string values inside found_list
+    found_list_str = search_input_tags(lines)
+    
+    #Check formats -> raise errors if tag not found or corrupted. Assign right types to list values
+    found_list = check_founds(found_list_str)
+    
+    return found_list
+
+###############################################################################
+
 def search_input_tags(read_list : list):
     """
     Search tags needed to perform the data extracion. The searching is performed
@@ -370,45 +414,3 @@ def check_founds(found_list : list):
     return found_list
 
 ###############################################################################
-
-def read_CP_input(file_path : str):
-    """
-    'main' program of this module. It reads a 'cp.x' input file and it controls
-    the other methods above. Open the 'cp.x' input file, load it into list of str,
-    call 'search_input_tags' to get the string values associated to the tags and
-    perform checks on them by calling 'check_founds'.
-    It returns the list of founds associated to the tags.
-
-    Parameters
-    ----------
-    file_path : str
-        'cp.x' input file path.
-
-    Raises
-    ------
-    errors
-        Inside 'check_founds' if the 'cp.x' is corrupted.
-
-    Returns
-    -------
-    found_list : list
-        Output list containing the values associated to each tag of the proper
-        type depending on the tag: 
-        'iprint' -> int; 'dt' -> float; 'celldm' -> float; 'nat' -> int; 'ntyp' -> int;
-        'CELL_PARAMETERS' -> np.array(float); 'ATOMIC_SPECIES' -> list of [str, float];
-        'ATOMIC_POSITIONS' -> list of str
-
-    """
-
-    #Input files are small so they can be load into memory
-    file = open(file_path, 'r')
-    lines = file.readlines()
-    file.close()
-    
-    #Search tags in lines and returns string values inside found_list
-    found_list_str = search_input_tags(lines)
-    
-    #Check formats -> raise errors if tag not found or corrupted. Assign right types to list values
-    found_list = check_founds(found_list_str)
-    
-    return found_list

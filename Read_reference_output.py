@@ -252,4 +252,6 @@ def sort_atoms(input_list : list):
     dz = sorted_z_pos[1:] - sorted_z_pos[:-1]
     up_slab_index = np.argmax(dz) + 1
     
-    return idx_z_sort, up_slab_index      
+    return idx_z_sort, up_slab_index
+
+###############################################################################

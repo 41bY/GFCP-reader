@@ -76,38 +76,38 @@ with open(OUT_fname, 'r') as file:
         
         else: #Bad reading
             err = 'Expected \'after\' or \'relax\' at line'
-            err += ro.Error_msg(iteration, num_relax, block_size, tags_line_num[3])
+            err += ro.Error_msg_line(iteration, num_relax, block_size, tags_line_num[3])
             break
         
         #Check and organize data, if corrupted fields throw errors
         #Temperature data
         temp, err = ro.check_temp(temp_str)
         if err != '': 
-            err += ro.Error_msg(iteration, num_relax, block_size, tags_line_num[0])
+            err += ro.Error_msg_line(iteration, num_relax, block_size, tags_line_num[0])
             break
         
         #Force up data
         fup, err = ro.check_force(fup_str)
         if err != '': 
-            err += ro.Error_msg(iteration, num_relax, block_size, tags_line_num[1])
+            err += ro.Error_msg_line(iteration, num_relax, block_size, tags_line_num[1])
             break
         
         #Force down data
         fdw, err = ro.check_force(fdw_str)
         if err != '':
-            err += ro.Error_msg(iteration, num_relax, block_size, tags_line_num[2])
+            err += ro.Error_msg_line(iteration, num_relax, block_size, tags_line_num[2])
             break
         
         #QM atoms data
         qm_atoms, err, n_line = ro.check_qm_atoms(qm_list)
         if err != '':
-            err += ro.Error_msg(iteration, num_relax, block_size, n_line+tags_line_num[4])
+            err += ro.Error_msg_line(iteration, num_relax, block_size, n_line+tags_line_num[4])
             break
         
         #GF atoms data
         gf_atoms, err, n_line = ro.check_gf_atoms(gf_list)
         if err != '': 
-            err += ro.Error_msg(iteration, num_relax, block_size, n_line+tags_line_num[5])
+            err += ro.Error_msg_line(iteration, num_relax, block_size, n_line+tags_line_num[5])
             break     
     
         #Order all atoms as in reference
@@ -127,7 +127,7 @@ with open(OUT_fname, 'r') as file:
         #Update iteration counter
         iteration += 1
     
-    #If iteration loop stops, close output files
+    #When iteration loop stops, close output files
     f_POS.close()
     f_FOR_up.close()
     f_FOR_dw.close()

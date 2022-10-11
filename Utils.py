@@ -4,8 +4,6 @@ Created on Sat Oct  1 10:22:10 2022
 
 @author: simula
 """
-import os
-import io
 
 ###############################################################################
 #Conversion factor
