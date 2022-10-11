@@ -143,8 +143,8 @@ def check_qm_atoms(atom_list : list):
 
     Returns
     -------
-    qm_atoms : list of str or Null list
-        Lines of atoms or Null if corruption occurs
+    qm_atoms : list of list of str or Null list
+        Lines of atom labels and coordinates or Null if corruption occurs
     err : str
         '' if no corruption occurs, error message otherwise.
 
@@ -179,6 +179,23 @@ def check_qm_atoms(atom_list : list):
 ###############################################################################
 
 def check_gf_atoms(atom_list : list):
+    """
+    Check the list associated to gf_atoms which contains the tag 'GF_ATOM_POSITIONS'.
+    Control if the lines are corrupted, in that case return an error_msg.
+
+    Parameters
+    ----------
+    atom_list : list of str
+        List associated to atoms
+
+    Returns
+    -------
+    gf_atoms : list of list of str or Null list
+        Lines of atom labels and coordinates or Null if corruption occurs
+    err : str
+        '' if no corruption occurs, error message otherwise.
+
+    """
 
     err_msg = '\'GF_ATOM_POSITIONS\' tag corrupted at line'
     
@@ -210,6 +227,25 @@ def check_gf_atoms(atom_list : list):
 ###############################################################################
 
 def write_xyz(file : io.TextIOBase, data_label : list, data_xyz : list, header : str):
+    """
+    Write a standard .xyz file format.
+
+    Parameters
+    ----------
+    file : io.TextIOBase
+        File object to be written.
+    data_label : list of str
+        Labels of the atomic data.
+    data_xyz : list of float
+        Coordinates of the atomic data.
+    header : str
+        Header before each iteration.
+
+    Returns
+    -------
+    None.
+
+    """
     
     file.write(header)
     for i, xyz in enumerate(data_xyz):
@@ -218,6 +254,26 @@ def write_xyz(file : io.TextIOBase, data_label : list, data_xyz : list, header :
 ###############################################################################
 
 def Error_msg(iteration : int,  num_relax : int, block_size : int , num_line_block : int):
+    """
+    Construct an error message indicating the line where the error has occured.
+
+    Parameters
+    ----------
+    iteration : int
+        Number of 'writing' iterations
+    num_relax : int
+        Number of skipped iterations
+    block_size : int
+        Number of line in a block
+    num_line_block : int
+        Line index inside the block where the error occurred.
+
+    Returns
+    -------
+    msg : str
+        Error message specifing where the error has occurred.
+
+    """
     file_line_num = 3 + (iteration + num_relax)*block_size + num_line_block
     file_line_num = int(file_line_num)
 
