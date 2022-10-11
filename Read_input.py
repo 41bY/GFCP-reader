@@ -11,6 +11,7 @@ import Utils as ut
 ###############################################################################
 
 def read_CP_input(file_path : str):
+
     """
     'main' program of this module. It reads a 'cp.x' input file and it controls
     the other methods above. Open the 'cp.x' input file, load it into list of str,
@@ -26,7 +27,8 @@ def read_CP_input(file_path : str):
     Raises
     ------
     errors
-        Inside 'check_founds' if the 'cp.x' is corrupted.
+        If found values are in different numbers to what expected or some of them
+        is not found.
 
     Returns
     -------
@@ -48,7 +50,11 @@ def read_CP_input(file_path : str):
     found_list_str = search_input_tags(lines)
     
     #Check formats -> raise errors if tag not found or corrupted. Assign right types to list values
-    found_list = check_founds(found_list_str)
+    found_list, err_msg = check_founds(found_list_str)
+    
+    #Handles errors
+    if err_msg != '':
+        raise ValueError(err_msg)
     
     return found_list
 
@@ -341,12 +347,6 @@ def check_founds(found_list : list):
         If a tag is corrupted the associated str will be ''. 
         If a tag is missing 'found_list' will have a smaller size.
 
-    Raises
-    ------
-    ValueError
-        Tag not found if 'found_list' has a different dimension that the one expected.
-        Corrupted tag if a specific tag is blanck.
-
     Returns
     -------
     found_list : list
@@ -357,60 +357,69 @@ def check_founds(found_list : list):
         'ATOMIC_POSITIONS' -> list of str
 
     """
+    err_msg = ''
     
     if len(found_list) != 8:
-        raise ValueError('Tags: \'iprint\' | \'dt\' | \'celldm\' | \'ntyp\' |'\
+        err_msg = 'Tags: \'iprint\' | \'dt\' | \'celldm\' | \'ntyp\' |'\
                          +' \'nat\' | \'CELL_PARAMETERS\' | \'ATOMIC_POSITIONS\' | \'ATOMIC_SPECIES\''\
-                         +' not found in CP input file.')
+                         +' not found in CP input file.'
+        return found_list, err_msg
     
     #iprint
     if found_list[0] != '':
         found_list[0] = int(found_list[0])
     else:
-        raise ValueError('Corrupted tag \'iprint\' in CP input file')
+        err_msg = 'Corrupted tag \'iprint\' in CP input file'
+        return found_list, err_msg
     
     #dt
     if found_list[1] != '':
         found_list[1] = float(found_list[1])
     else:
-        raise ValueError('Corrupted tag \'dt\' in CP input file')
+        err_msg = 'Corrupted tag \'dt\' in CP input file'
+        return found_list, err_msg
     
     #celldm
     if found_list[2] != '':
         found_list[2] = float(found_list[2])
     else:
-        raise ValueError('Corrupted tag \'celldm\' in CP input file')
+        err_msg = 'Corrupted tag \'celldm\' in CP input file'
+        return found_list, err_msg
 
     #nat
     if found_list[3] != '':
         found_list[3] = int(found_list[3])
     else:
-        raise ValueError('Corrupted tag \'nat\' in CP input file')
+        err_msg = 'Corrupted tag \'nat\' in CP input file'
+        return found_list, err_msg
 
     #ntyp
     if found_list[4] != '':
         found_list[4] = int(found_list[4])
     else:
-        raise ValueError('Corrupted tag \'ntyp\' in CP input file')
+        err_msg = 'Corrupted tag \'ntyp\' in CP input file'
+        return found_list, err_msg
         
     #Cell
     if found_list[5] != []:
         found_list[5] = np.array(found_list[5], dtype=float)
     else:
-        raise ValueError('Corrupted tag \'CELL_PARAMETERS\' in CP input file')
+        err_msg = 'Corrupted tag \'CELL_PARAMETERS\' in CP input file'
+        return found_list, err_msg
     
     #Species
     if found_list[6] != []:
         found_list[6] = [[fnd[0], float(fnd[1])] for fnd in found_list[6]]
     else:
-        raise ValueError('Corrupted tag \'ATOMIC_SPECIES\' in CP input file')
+        err_msg = 'Corrupted tag \'ATOMIC_SPECIES\' in CP input file'
+        return found_list, err_msg
     
     #Species
     if found_list[7] != []:
         found_list[7] = found_list[7]
     else:
-        raise ValueError('Corrupted tag \'ATOMIC_POSITIONS\' in CP input file')
+        err_msg = 'Corrupted tag \'ATOMIC_POSITIONS\' in CP input file'
+        return found_list, err_msg
         
-    return found_list
-
+    return found_list, err_msg
 ###############################################################################
