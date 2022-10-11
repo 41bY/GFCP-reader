@@ -10,6 +10,23 @@ import io
 ###############################################################################
 
 def read_block(file : io.TextIOBase, num_lines : int):
+    """
+    Read iteration block from GFCP output file consisting in 'num_lines'.
+
+    Parameters
+    ----------
+    file : io.TextIOBase
+        File object for GFCP output file
+    num_lines : int
+        Number of lines to be taken for a block.
+
+    Returns
+    -------
+    block : list of str
+        List containing the lines of the read block. If EOF is reached the lines
+        are read with ''.
+
+    """
     
     block = []
     for i in range(num_lines):
@@ -21,6 +38,23 @@ def read_block(file : io.TextIOBase, num_lines : int):
 ###############################################################################
 
 def check_temp(temp_str : str):
+    """
+    Check the line associated to temperature which contains the tag 'kt_gf'.
+    Control if the line is corrupted, in that case return an error_msg.
+
+    Parameters
+    ----------
+    temp_str : str
+        Line associated to temperature
+
+    Returns
+    -------
+    temp : float or None
+        Temperature or None if line is corrupted
+    err : str
+        '' if no corruption occurs, error message otherwise.
+
+    """
     
     err_msg = '\'kt_gf\' tag corrupted at line'
     
@@ -51,6 +85,24 @@ def check_temp(temp_str : str):
 ###############################################################################
 
 def check_force(force_str : str):
+    """
+    Check the line associated to forces which contains the tag 'upper[GPa]' or
+    'lower[GPa]'.
+    Control if the line is corrupted, in that case return an error_msg.
+
+    Parameters
+    ----------
+    force_str : str
+        Line associated to force
+
+    Returns
+    -------
+    force : list of float or None
+        Forces or None if line is corrupted
+    err : str
+        '' if no corruption occurs, error message otherwise.
+
+    """
     
     err_msg = '\'Force\' tag corrupted at line'
     
@@ -80,6 +132,23 @@ def check_force(force_str : str):
 ###############################################################################
 
 def check_qm_atoms(atom_list : list):
+    """
+    Check the list associated to qm_atoms which contains the tag 'ATOMIC_POSITIONS'.
+    Control if the lines are corrupted, in that case return an error_msg.
+
+    Parameters
+    ----------
+    atom_list : list of str
+        List associated to atoms
+
+    Returns
+    -------
+    qm_atoms : list of str or Null list
+        Lines of atoms or Null if corruption occurs
+    err : str
+        '' if no corruption occurs, error message otherwise.
+
+    """
 
     err_msg = '\'ATOMIC_POSITIONS\' tag corrupted at line'
     
